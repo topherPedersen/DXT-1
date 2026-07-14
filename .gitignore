@@ -1,5 +1,0 @@
-api/data/jobs/*
-!api/data/jobs/.gitkeep
-models/oaf_drums/*
-!models/oaf_drums/.gitkeep
-.DS_Store
