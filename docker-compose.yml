@@ -1,0 +1,26 @@
+services:
+  oaf:
+    platform: linux/amd64
+    build:
+      context: ./oaf_worker
+    environment:
+      MODEL_DIR: /models/oaf_drums
+      JOBS_DIR: /jobs
+    volumes:
+      - ./models/oaf_drums:/models/oaf_drums
+      - ./api/data/jobs:/jobs
+    ports:
+      - "8011:8011"
+
+  api:
+    build:
+      context: ./api
+    depends_on:
+      - oaf
+    environment:
+      OAF_URL: http://oaf:8011
+      JOBS_DIR: /app/data/jobs
+    volumes:
+      - ./api/data/jobs:/app/data/jobs
+    ports:
+      - "8000:8000"
