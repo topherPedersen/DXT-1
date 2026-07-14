@@ -62,16 +62,32 @@ class GrooveDataset(Dataset):
                 )
 
         rows = []
-        with csv_path.open(newline="", encoding="utf-8") as handle:
+        with csv_path.open(newline="", encoding="utf-8-sig") as handle:
             for row in csv.DictReader(handle):
                 if row.get("split") != split:
                     continue
-                audio = self.root / row["audio_filename"]
-                midi = self.root / row["midi_filename"]
-                if audio.exists() and midi.exists():
+                audio_filename = (row.get("audio_filename") or "").strip()
+                midi_filename = (row.get("midi_filename") or "").strip()
+
+                # Blank paths become self.root when joined with Path. Because
+                # Path.exists() is True for directories, the old loader could
+                # accidentally send the dataset folder to TorchAudio.
+                if not audio_filename or not midi_filename:
+                    continue
+
+                audio = (self.root / audio_filename).resolve()
+                midi = (self.root / midi_filename).resolve()
+
+                # Require actual files, not merely existing paths.
+                if audio.is_file() and midi.is_file():
                     rows.append((audio, midi))
+
         if not rows:
-            raise RuntimeError(f"No usable {split} rows found in {csv_path}")
+            raise RuntimeError(
+                f"No usable audio/MIDI pairs were found for split '{split}' "
+                f"in {csv_path}. Confirm the selected directory directly "
+                "contains info.csv and the referenced .wav/.mid files."
+            )
         self.rows = rows
 
     def __len__(self):

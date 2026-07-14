@@ -143,3 +143,30 @@ manifest before release.
 5. Train on E-GMD.
 6. Add real commercial-song stems that you own or have permission to use.
 7. Export the final model to ONNX or Core ML for easier distribution.
+
+
+## Dataset path validation fix
+
+This release rejects blank paths and directories before passing audio files to
+TorchAudio. It also includes:
+
+```bash
+source .venv/bin/activate
+python -m training.check_dataset /absolute/path/to/groove
+```
+
+Use that command to inspect malformed CSV rows or missing file references.
+
+
+## Dependency versions used in this release
+
+This package includes the user-tested `requirements.txt` versions:
+
+```text
+torch==2.13.0
+torchaudio==2.11.0
+torchcodec==0.14.0
+scikit-learn==1.9.0
+```
+
+along with the remaining pinned dependencies in `requirements.txt`.
