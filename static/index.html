@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RD-8 AI Drummer v2</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <h1>RD-8 AI Drummer v2</h1>
+  <p class="lead">Separate a drum stem with Demucs, transcribe it with ADTOF, edit the detected hits, and play them through your Behringer RD-8 over Web MIDI.</p>
+
+  <section class="panel upload-grid">
+    <label>Audio file <input id="audioFile" type="file" accept="audio/*"></label>
+    <label><input id="skipDemucs" type="checkbox"> Input is already a drum-only stem</label>
+    <label>Compute device
+      <select id="device"><option value="cpu">CPU</option><option value="mps">Apple Silicon MPS</option><option value="cuda">CUDA</option></select>
+    </label>
+    <label>ADTOF thresholds (optional)
+      <input id="thresholds" placeholder="0.22,0.24,0.32,0.22,0.30">
+    </label>
+    <button id="transcribe">Separate + transcribe</button>
+    <span id="status">Ready.</span>
+  </section>
+
+  <section class="panel controls">
+    <button id="connectMidi">Connect MIDI</button>
+    <select id="midiOutput"><option>No MIDI output selected</option></select>
+    <label>RD-8 receive channel <input id="channel" type="number" min="1" max="16" value="10"></label>
+    <label>BPM <input id="bpm" type="number" min="20" max="400" value="120"></label>
+    <button id="play">Play</button><button id="stop">Stop</button>
+    <button id="quantize">Quantize 1/16</button>
+    <button id="export">Export RD-8 MIDI</button>
+  </section>
+
+  <section class="panel" id="results" hidden>
+    <h2>Separated drum stem</h2>
+    <audio id="drumsAudio" controls></audio>
+    <p><a id="rawMidi" href="#">Download raw ADTOF MIDI</a></p>
+    <h2>Detected events <small>(click a drum name/velocity/time to edit; Delete removes a selected row)</small></h2>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Time</th><th>Drum</th><th>RD-8 note</th><th>Velocity</th><th></th></tr></thead><tbody id="eventRows"></tbody></table></div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

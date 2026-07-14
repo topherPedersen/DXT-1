@@ -1,98 +1,113 @@
-# RD-8 AI Drummer v1
+# RD-8 AI Drummer v2
 
-This project:
+Local MP3/audio → drum stem → drum MIDI → Behringer RD-8 pipeline.
 
-1. uploads a WAV/MP3/etc.;
-2. estimates BPM and beat locations with librosa;
-3. computes one energy value per estimated bar;
-4. asks an OpenAI text model to compose an original 16-step RD-8 arrangement;
-5. validates the returned JSON;
-6. writes a Standard MIDI File with Mido; and
-7. lets Chrome play the JSON arrangement directly through Web MIDI.
+## Pipeline
 
-## Prerequisites
+1. **Demucs / HTDemucs** extracts `drums.wav` from a mixed song.
+2. **ADTOF-pytorch** detects five drum families: kick, snare, hi-hat, tom and cymbal.
+3. The backend remaps General MIDI output to an RD-8-friendly map.
+4. The browser lets you edit events, quantize, export MIDI, or play directly through Web MIDI.
 
-- Python 3.11 or newer
-- Google Chrome
-- Your Mac connected to the RD-8 by USB MIDI or a USB-to-5-pin MIDI interface
-- An OpenAI API key
-- FFmpeg may be needed for some compressed audio formats. WAV should work without it.
+## RD-8 note map used
 
-## Install
+| Voice | MIDI note |
+|---|---:|
+| Bass drum | 36 |
+| Snare | 40 |
+| Closed hi-hat | 42 |
+| Open hi-hat | 46 |
+| Low tom | 45 |
+| Mid tom | 47 |
+| High tom | 50 |
+| Cymbal | 51 |
+
+Confirm these against your RD-8's current global MIDI note-map settings. The app defaults to MIDI channel 10, but select the channel your RD-8 is configured to receive.
+
+## macOS installation
+
+Use Python **3.11** for the smoothest compatibility.
 
 ```bash
-cd rd8_ai_drummer_v1
-python3 -m venv .venv
+cd rd8-ai-drummer-v2
+./setup-mac.sh
 source .venv/bin/activate
+./run.sh
+```
+
+Then open `http://127.0.0.1:8000` in Chrome.
+
+Manual installation:
+
+```bash
+brew install python@3.11 ffmpeg
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
-export OPENAI_API_KEY="your-key-here"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-The default model is `gpt-5.6-luna`. Override it with:
+The first transcription downloads the Demucs model. A full song is CPU-intensive; begin with a 20–30 second MP3 excerpt.
 
-```bash
-export OPENAI_MODEL="gpt-5.6-terra"
-```
+## Using the app
 
-## Run
+1. Upload an MP3, WAV, FLAC, M4A, OGG or AIFF file.
+2. Leave **Input is already a drum-only stem** unchecked for a normal mixed song.
+3. Start with **CPU**. Apple MPS may work for some PyTorch operations, but CPU is the conservative first test.
+4. Click **Separate + transcribe**.
+5. Inspect and edit the event table.
+6. Connect the Mac to the RD-8 by USB, enable Web MIDI in Chrome, click **Connect MIDI**, and select the RD-8.
+7. Verify the receive channel and click **Play**.
+8. Export `rd8-drums.mid` after corrections.
 
-```bash
-uvicorn app:app --reload --host 127.0.0.1 --port 8000
-```
+## Threshold tuning
 
-Open:
+ADTOF accepts five comma-separated thresholds in this order:
 
 ```text
-http://127.0.0.1:8000
+kick,snare,hi-hat,tom,cymbal
 ```
 
-Do not open `index.html` as a `file:///` URL. Serving it through localhost avoids browser
-origin restrictions and is also the correct context for Web MIDI.
+A documented example is:
 
-## RD-8 setup
-
-1. Connect the RD-8 to the Mac.
-2. Set the RD-8 to receive MIDI on channel 10, or edit `channel = 9` in `app.py`
-   and the status bytes in `index.html`.
-3. Verify the note map. The project currently uses General MIDI percussion notes.
-   Change `RD8_NOTE_MAP` in `app.py` and `NOTE_MAP` in `index.html` to match the
-   exact RD-8 mapping/configuration you use.
-4. In Chrome, click **Connect MIDI**, then select the RD-8 MIDI output.
-
-## Important v1 limitations
-
-- This version estimates global tempo and assumes 4/4.
-- Section detection is deliberately simple: eight-bar chunks labeled by energy.
-- The LLM does not receive the copyrighted recording. It receives numerical analysis
-  and composes a new accompaniment.
-- It does not yet identify bass notes, chord changes, vocal phrases, or the exact
-  existing drum part.
-- Songs with rubato, changing meter, unusual tempo, or weak percussion may need
-  manual BPM correction.
-
-## JSON format
-
-```json
-{
-  "title": "Example",
-  "bpm": 128.0,
-  "bars": 32,
-  "swing_percent": 54,
-  "hits": [
-    {
-      "bar": 1,
-      "step": 0,
-      "instrument": "kick",
-      "velocity": 112,
-      "microshift_ms": 0
-    }
-  ]
-}
+```text
+0.22,0.24,0.32,0.22,0.30
 ```
 
-Each bar has 16 steps:
+Lowering a threshold detects more hits but increases false positives. Raising it removes false hits but can miss quieter notes. Leave the field blank to use the model defaults first.
 
-- 0 = beat 1
-- 4 = beat 2
-- 8 = beat 3
-- 12 = beat 4
+## Important limitations
+
+- ADTOF predicts five broad families. It does not inherently distinguish open from closed hi-hat, individual tom pitches, rimshot, clap or cowbell. The first version maps its hi-hat class to closed hi-hat and its tom class to mid tom; edit those rows manually.
+- Source separation can produce bleed and artifacts that become false drum hits.
+- Quantization is optional. Use it for machine-tight patterns; avoid it when the recording deliberately swings.
+- The app processes synchronously. Use short excerpts while testing.
+
+## Troubleshooting
+
+### `ffmpeg` not found
+
+```bash
+brew install ffmpeg
+```
+
+### ADTOF install cannot clone GitHub
+
+Check internet access, then run:
+
+```bash
+pip install 'git+https://github.com/xavriley/ADTOF-pytorch.git@main'
+```
+
+### RD-8 appears but makes no sound
+
+- Verify the RD-8 receive channel and the app's channel match.
+- Confirm Chrome has MIDI permission.
+- Verify the RD-8 USB device is selected, not an internal macOS synth.
+- Check the RD-8 global MIDI note mapping.
+- Try note 36 (bass drum) and note 40 (snare) in the event table.
+
+### Too many or too few hits
+
+Adjust one threshold at a time. Start with the documented example, then raise the noisy class by approximately `0.03`; lower a class that misses hits by approximately `0.03`.
