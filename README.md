@@ -1,113 +1,101 @@
-# RD-8 AI Drummer v2
+# RD-8 AI Drummer v3 — complete project
 
-Local MP3/audio → drum stem → drum MIDI → Behringer RD-8 pipeline.
+This version contains the complete backend and browser player. No patching of
+an older codebase is required.
 
 ## Pipeline
 
-1. **Demucs / HTDemucs** extracts `drums.wav` from a mixed song.
-2. **ADTOF-pytorch** detects five drum families: kick, snare, hi-hat, tom and cymbal.
-3. The backend remaps General MIDI output to an RD-8-friendly map.
-4. The browser lets you edit events, quantize, export MIDI, or play directly through Web MIDI.
-
-## RD-8 note map used
-
-| Voice | MIDI note |
-|---|---:|
-| Bass drum | 36 |
-| Snare | 40 |
-| Closed hi-hat | 42 |
-| Open hi-hat | 46 |
-| Low tom | 45 |
-| Mid tom | 47 |
-| High tom | 50 |
-| Cymbal | 51 |
-
-Confirm these against your RD-8's current global MIDI note-map settings. The app defaults to MIDI channel 10, but select the channel your RD-8 is configured to receive.
+1. Upload a song in the browser.
+2. Demucs extracts the drum stem.
+3. ADTOF-PyTorch transcribes the drum stem to MIDI.
+4. Full mode returns that transcription.
+5. Groove Mode identifies a representative 1-, 2-, or 4-bar section,
+   simplifies it, repeats it, and optionally adds phrase landmarks.
+6. The browser sends the notes to the RD-8 over Web MIDI channel 10.
 
 ## macOS installation
 
-Use Python **3.11** for the smoothest compatibility.
+Open Terminal, drag this folder into Terminal after typing `cd `, and press
+Return. Then run:
 
 ```bash
-cd rd8-ai-drummer-v2
-./setup-mac.sh
-source .venv/bin/activate
-./run.sh
+chmod +x install_mac.sh run_mac.sh
+./install_mac.sh
+./run_mac.sh
 ```
 
-Then open `http://127.0.0.1:8000` in Chrome.
-
-Manual installation:
-
-```bash
-brew install python@3.11 ffmpeg
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-The first transcription downloads the Demucs model. A full song is CPU-intensive; begin with a 20–30 second MP3 excerpt.
-
-## Using the app
-
-1. Upload an MP3, WAV, FLAC, M4A, OGG or AIFF file.
-2. Leave **Input is already a drum-only stem** unchecked for a normal mixed song.
-3. Start with **CPU**. Apple MPS may work for some PyTorch operations, but CPU is the conservative first test.
-4. Click **Separate + transcribe**.
-5. Inspect and edit the event table.
-6. Connect the Mac to the RD-8 by USB, enable Web MIDI in Chrome, click **Connect MIDI**, and select the RD-8.
-7. Verify the receive channel and click **Play**.
-8. Export `rd8-drums.mid` after corrections.
-
-## Threshold tuning
-
-ADTOF accepts five comma-separated thresholds in this order:
+Open:
 
 ```text
-kick,snare,hi-hat,tom,cymbal
+http://127.0.0.1:8000
 ```
 
-A documented example is:
+Use Chrome or Edge for Web MIDI.
 
-```text
-0.22,0.24,0.32,0.22,0.30
-```
+## RD-8 connection
 
-Lowering a threshold detects more hits but increases false positives. Raising it removes false hits but can miss quieter notes. Leave the field blank to use the model defaults first.
+Connect the Mac to the RD-8 using USB, or use a USB MIDI interface connected to
+the RD-8 MIDI IN. In the page:
 
-## Important limitations
+1. Click **Connect MIDI**.
+2. Select the RD-8 or USB MIDI interface.
+3. Generate or load the MIDI.
+4. Click **Play**.
 
-- ADTOF predicts five broad families. It does not inherently distinguish open from closed hi-hat, individual tom pitches, rimshot, clap or cowbell. The first version maps its hi-hat class to closed hi-hat and its tom class to mid tom; edit those rows manually.
-- Source separation can produce bleed and artifacts that become false drum hits.
-- Quantization is optional. Use it for machine-tight patterns; avoid it when the recording deliberately swings.
-- The app processes synchronously. Use short excerpts while testing.
+The app sends percussion notes on MIDI channel 10.
+
+## Recommended Groove Mode settings
+
+- Repeating pattern: 2 bars
+- Complexity: 55%
+- Generated length: 32 bars
+- Phrase landmark: every 8 bars
+- Demucs model: htdemucs
+- Device: Automatic
+
+## First-run behavior
+
+Demucs may download model weights the first time it runs. ADTOF-PyTorch bundles
+its model weights according to its project documentation.
 
 ## Troubleshooting
 
-### `ffmpeg` not found
+### `ffmpeg` missing
+
+Install Homebrew and run:
 
 ```bash
 brew install ffmpeg
 ```
 
-### ADTOF install cannot clone GitHub
+### MPS error on an Intel Mac
 
-Check internet access, then run:
+Select **CPU** in the web page. MPS is only for Apple Silicon-compatible
+PyTorch installations.
 
-```bash
-pip install 'git+https://github.com/xavriley/ADTOF-pytorch.git@main'
+### MIDI output is missing
+
+Use Chrome or Edge, click **Connect MIDI**, and confirm the RD-8 or interface is
+visible to macOS in Audio MIDI Setup.
+
+### Processing returns an error
+
+The full backend error is returned to the page. Also inspect the Terminal
+window where `run_mac.sh` is running.
+
+## Project structure
+
+```text
+rd8_ai_drummer_v3_full/
+├── app.py
+├── pipeline.py
+├── groove.py
+├── requirements.txt
+├── install_mac.sh
+├── run_mac.sh
+├── README.md
+├── data/
+│   └── jobs/
+└── static/
+    └── index.html
 ```
-
-### RD-8 appears but makes no sound
-
-- Verify the RD-8 receive channel and the app's channel match.
-- Confirm Chrome has MIDI permission.
-- Verify the RD-8 USB device is selected, not an internal macOS synth.
-- Check the RD-8 global MIDI note mapping.
-- Try note 36 (bass drum) and note 40 (snare) in the event table.
-
-### Too many or too few hits
-
-Adjust one threshold at a time. Start with the documented example, then raise the noisy class by approximately `0.03`; lower a class that misses hits by approximately `0.03`.
