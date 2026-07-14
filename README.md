@@ -170,3 +170,25 @@ scikit-learn==1.9.0
 ```
 
 along with the remaining pinned dependencies in `requirements.txt`.
+
+
+## TorchCodec decode fix
+
+Training audio is now loaded with `soundfile`/libsndfile rather than
+`torchaudio.load`. The Groove MIDI Dataset uses WAV files, so this avoids the
+TorchCodec/FFmpeg decoder path that produced:
+
+```text
+Could not receive frame from decoder: Invalid data found when processing input
+```
+
+TorchAudio remains in use for resampling and mel-spectrogram generation.
+
+Before training, you can validate every referenced WAV file:
+
+```bash
+source .venv/bin/activate
+python -m training.validate_audio /Users/christopherpedersen/Downloads/groove
+```
+
+Any genuinely damaged file will be reported by its exact path.

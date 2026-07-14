@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
+import soundfile as sf
 import torch
 import torchaudio
 
@@ -34,10 +37,42 @@ class LogMelExtractor(torch.nn.Module):
 
 
 def load_audio(path, sample_rate: int) -> torch.Tensor:
-    waveform, source_rate = torchaudio.load(str(path))
-    waveform = waveform.mean(dim=0)
-    if source_rate != sample_rate:
-        waveform = torchaudio.functional.resample(
-            waveform, source_rate, sample_rate
+    """
+    Load GMD WAV files with libsndfile instead of torchaudio.load/TorchCodec.
+
+    The Groove MIDI Dataset contains ordinary WAV files. Reading them through
+    soundfile avoids TorchCodec's FFmpeg decoder path, which can fail on an
+    otherwise valid file with "Invalid data found when processing input".
+    """
+    path = Path(path)
+
+    if not path.is_file():
+        raise RuntimeError(f"Audio path is not a file: {path}")
+
+    try:
+        audio, source_rate = sf.read(
+            str(path),
+            dtype="float32",
+            always_2d=True,
         )
+    except Exception as exc:
+        raise RuntimeError(
+            f"Failed to decode dataset audio file with soundfile: {path}\n"
+            f"Original decoder error: {exc}"
+        ) from exc
+
+    if audio.size == 0:
+        raise RuntimeError(f"Dataset audio file is empty: {path}")
+
+    # soundfile returns [samples, channels]. Convert to mono.
+    mono = np.mean(audio, axis=1, dtype=np.float32)
+    waveform = torch.from_numpy(np.ascontiguousarray(mono))
+
+    if int(source_rate) != sample_rate:
+        waveform = torchaudio.functional.resample(
+            waveform,
+            int(source_rate),
+            sample_rate,
+        )
+
     return waveform
