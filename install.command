@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+cd "$(dirname "$0")"
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+
+echo
+echo "Installation complete."
+echo "Train with: ./train.command /absolute/path/to/groove-v1.0.0"
