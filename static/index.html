@@ -22,7 +22,7 @@
     .modes { display:flex; gap:18px; }
     .modes label { display:flex; align-items:center; gap:6px; }
     .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-    button, .download { display:inline-block; border:0; border-radius:8px; padding:11px 16px; background:#eee; color:#111; cursor:pointer; text-decoration:none; font-weight:650; }
+    button { display:inline-block; border:0; border-radius:8px; padding:11px 16px; background:#eee; color:#111; cursor:pointer; font-weight:650; }
     button.secondary { background:#3a3a3a; color:#eee; }
     button:disabled { opacity:.45; cursor:not-allowed; }
     #status { white-space:pre-wrap; min-height:24px; }
@@ -109,7 +109,7 @@
 
     <p class="controls">
       <button id="processButton">Create MIDI</button>
-      <a id="downloadLink" class="download" hidden>Download MIDI</a>
+      <button id="downloadButton" type="button" disabled>Download MIDI</button>
     </p>
     <progress id="progress" hidden></progress>
     <div id="status"></div>
@@ -143,11 +143,12 @@
   const outputsSelect = $("midiOutputs");
   const playButton = $("playButton");
   const stopButton = $("stopButton");
-  const downloadLink = $("downloadLink");
+  const downloadButton = $("downloadButton");
   const log = $("log");
 
   let midiAccess = null;
   let midi = null;
+  let downloadUrl = null;
   let timers = [];
   let activeNotes = new Set();
 
@@ -212,7 +213,8 @@
 
     processButton.disabled = true;
     progress.hidden = false;
-    downloadLink.hidden = true;
+    downloadUrl = null;
+    downloadButton.disabled = true;
     status.textContent = "Uploading your song…";
 
     try {
@@ -221,9 +223,8 @@
       if (!response.ok) throw new Error(queuedJob.detail || "Processing failed.");
       const completedJob = await waitForJob(queuedJob.status_url);
 
-      downloadLink.href = completedJob.download_url;
-      downloadLink.download = completedJob.download_name;
-      downloadLink.hidden = false;
+      downloadUrl = completedJob.download_url;
+      downloadButton.disabled = false;
       status.textContent = `Finished: ${completedJob.download_name} is ready to download.`;
     } catch (error) {
       status.textContent = `Error: ${error.message}`;
@@ -235,6 +236,9 @@
   }
 
   processButton.addEventListener("click", processAudio);
+  downloadButton.addEventListener("click", () => {
+    if (downloadUrl) window.location.assign(downloadUrl);
+  });
 
   async function connectMidi() {
     if (!navigator.requestMIDIAccess) {
