@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -63,15 +62,10 @@ def separate_drums(
     model: str,
     device: str,
 ) -> Path:
-    if shutil.which("demucs") is None:
-        raise RuntimeError(
-            "Demucs is not installed or is not on PATH. "
-            "Activate the project virtual environment and run ./install_mac.sh "
-            "or pip install -r requirements.txt."
-        )
-
     separated_dir = job_dir / "separated"
     command = [
+        sys.executable,
+        "-m",
         "demucs",
         "--two-stems=drums",
         "-n",

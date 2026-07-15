@@ -9,8 +9,9 @@
   "scripts": {
     "start": "electron .",
     "desktop:setup": "./install_mac.sh && npm install",
-    "dist:mac": "electron-builder --mac dmg zip",
-    "pack:mac": "electron-builder --mac dir"
+    "prepare:runtime": "./scripts/prepare_desktop_runtime.sh",
+    "dist:mac": "npm run prepare:runtime && electron-builder --mac dmg zip",
+    "pack:mac": "npm run prepare:runtime && electron-builder --mac dir"
   },
   "devDependencies": {
     "electron": "43.1.1",
@@ -31,6 +32,10 @@
       "THIRD_PARTY_NOTICES.md"
     ],
     "extraResources": [
+      {
+        "from": "build/runtime-${arch}",
+        "to": "runtime"
+      },
       {
         "from": ".",
         "to": "backend",

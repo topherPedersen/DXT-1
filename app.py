@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-import shutil
+import importlib.util
 import uuid
 from pathlib import Path
 from typing import Annotated, Literal
@@ -45,7 +45,7 @@ def index() -> FileResponse:
 def health() -> dict:
     return {
         "ok": True,
-        "demucs_available": shutil.which("demucs") is not None,
+        "demucs_available": importlib.util.find_spec("demucs") is not None,
     }
 
 

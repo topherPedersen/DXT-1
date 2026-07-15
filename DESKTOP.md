@@ -14,6 +14,9 @@ Requirements:
 - Homebrew, used by the installer to install FFmpeg when necessary
 - An internet connection during installation and the first conversion
 
+These are developer requirements for running from source. People installing a
+release DMG do not need Node.js, Homebrew, Python, FFmpeg, or Terminal.
+
 In Terminal, change to the cloned DXT-1 directory and run:
 
 ```bash
@@ -46,20 +49,34 @@ Silicon; build on an Intel Mac for an Intel-specific artifact. Producing and
 testing a universal app also requires compatible Python/native dependencies for
 both architectures.
 
-The packaged app intentionally does not bundle the large Python/PyTorch
-environment. On its first launch it creates a private environment under
-`~/Library/Application Support/DXT-1/runtime`, then downloads Demucs, PyTorch,
-ADTOF, and their dependencies. The destination Mac therefore needs Python 3.9+
-and FFmpeg. With Homebrew these can be installed using:
+Before Electron Builder runs, `npm run prepare:runtime` downloads a
+redistributable, architecture-specific CPython build and installs PyTorch,
+Demucs, ADTOF-PyTorch, and the other backend packages into it. It also extracts
+the architecture-specific FFmpeg executable supplied by `imageio-ffmpeg`.
+Electron Builder places that complete runtime inside `DXT-1.app`.
 
 ```bash
-brew install python ffmpeg
+npm run prepare:runtime
 ```
 
-The first conversion may additionally download Demucs model weights. Runtime
-data, temporary jobs, model caches, and logs live below
-`~/Library/Application Support/DXT-1/`. Completed and failed jobs are retained
-for 24 hours by default and then cleaned up.
+The runtime build is cached under `build/runtime-arm64` or
+`build/runtime-x64`, so later builds do not reinstall it unless its inputs
+change. The release artifact will be substantially larger because it contains
+Python, PyTorch, and FFmpeg. The build process needs internet access, but the
+end user's Mac does not need those tools installed.
+
+Demucs may automatically download the selected model weights the first time a
+particular model is used. This happens inside the app without Terminal or
+administrator access. Application data, model caches, temporary jobs, and logs
+live below `~/Library/Application Support/DXT-1/`. Completed and failed jobs
+are retained for 24 hours by default and then cleaned up.
+
+> **Distribution licensing warning:** a self-contained DMG redistributes its
+> embedded dependencies. ADTOF-PyTorch currently publishes no license even
+> though it contains code and converted ADTOF weights. Obtain permission or a
+> licensing clarification from the relevant rights holders before publicly
+> distributing the bundled application. Review `THIRD_PARTY_NOTICES.md` and
+> preserve all notices and source/code obligations for the exact release.
 
 ## Signing and notarizing a public release
 
@@ -236,10 +253,10 @@ shasum -a 256 "dist/DXT-1-0.5.0-arm64.dmg"
 ```
 
 Users download the DMG, open it, drag DXT-1 into Applications, and launch it.
-The current DXT-1 package performs a first-run Python dependency installation,
-so users still need Python 3.9+, FFmpeg, and an internet connection as described
-earlier in this guide. Signing and notarization establish trust in the app, but
-do not remove those runtime prerequisites.
+The DMG contains the application runtime. Users do not need Homebrew, Python,
+FFmpeg, Node.js, npm, or command-line setup. They only open the DMG, drag DXT-1
+to Applications, and launch it. An internet connection may be used
+automatically when a Demucs model is selected for the first time.
 
 Official references:
 
@@ -252,8 +269,7 @@ Official references:
 
 - Startup and Python service logs:
   `~/Library/Application Support/DXT-1/logs/backend.log`
-- If setup was interrupted, quit DXT-1, remove only its `runtime` directory,
-  and reopen it to retry the installation.
-- If the app reports that FFmpeg is missing, run `brew install ffmpeg`.
+- If a packaged build reports that Python or FFmpeg is missing, it was built
+  without `npm run prepare:runtime`; rebuild and reinstall the complete DMG.
 - The `DXT_PYTHON` and `DXT_FFMPEG` environment variables can point development
   or test launches at specific executables.
