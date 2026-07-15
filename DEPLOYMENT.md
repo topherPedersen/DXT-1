@@ -101,6 +101,27 @@ rate limits, starts the API and worker, and performs a health check. With
 `--enable-https`, it also requests a Let's Encrypt certificate through
 Certbot. DNS must be working and ports 80 and 443 must be reachable first.
 
+On standard CPU Droplets, the installer explicitly installs CPU-only PyTorch.
+This avoids downloading several gigabytes of unused NVIDIA CUDA libraries. It
+also places `pip` temporary files under `/var/cache/dxt-1/pip-tmp` on the
+persistent root disk instead of Ubuntu's smaller memory-backed `/tmp`, disables
+the duplicate pip download cache, and requires at least 8 GB of free disk space
+before dependency installation.
+
+For a future GPU Droplet, first create `/opt/dxt-1/.venv` and install the
+PyTorch/torchaudio build recommended by PyTorch for that Droplet's GPU and
+driver. Then run the installer with:
+
+```bash
+./deploy/install_ubuntu.sh \
+  --torch-backend existing \
+  --acknowledge-adtof-license-risk
+```
+
+Include the domain and HTTPS options when applicable. The `existing` mode
+verifies that both `torch` and `torchaudio` import successfully and does not
+replace them with CPU wheels.
+
 ### E. Configure the DigitalOcean firewall
 
 In DigitalOcean, create a Cloud Firewall allowing:

@@ -9,6 +9,7 @@ DOMAIN="_"
 EMAIL=""
 ENABLE_HTTPS=false
 ACKNOWLEDGE_LICENSE=false
+TORCH_BACKEND="cpu"
 
 usage() {
   cat <<'EOF'
@@ -18,6 +19,7 @@ Options:
   --domain DOMAIN       Public domain name, for example dxt.example.com
   --email EMAIL         Email address used by Certbot
   --enable-https        Request and configure a Let's Encrypt certificate
+  --torch-backend MODE  PyTorch installation mode: cpu (default) or existing
   --acknowledge-adtof-license-risk
                         Confirm that you reviewed THIRD_PARTY_NOTICES.md
   -h, --help            Show this help
@@ -42,6 +44,11 @@ while [[ $# -gt 0 ]]; do
     --enable-https)
       ENABLE_HTTPS=true
       shift
+      ;;
+    --torch-backend)
+      [[ $# -ge 2 ]] || { echo "--torch-backend requires a value" >&2; exit 2; }
+      TORCH_BACKEND="$2"
+      shift 2
       ;;
     --acknowledge-adtof-license-risk)
       ACKNOWLEDGE_LICENSE=true
@@ -87,6 +94,11 @@ if $ENABLE_HTTPS && { [[ "$DOMAIN" == "_" ]] || [[ -z "$EMAIL" ]]; }; then
   exit 2
 fi
 
+if [[ "$TORCH_BACKEND" != "cpu" && "$TORCH_BACKEND" != "existing" ]]; then
+  echo "--torch-backend must be either cpu or existing." >&2
+  exit 2
+fi
+
 if ! $ACKNOWLEDGE_LICENSE; then
   cat >&2 <<'EOF'
 Installation stopped: ADTOF-PyTorch currently publishes no license.
@@ -110,6 +122,19 @@ if ! id dxt >/dev/null 2>&1; then
 fi
 
 install -d -o dxt -g dxt -m 0750 "$DATA_DIR" "$DATA_DIR/jobs" "$CACHE_DIR"
+PIP_TMP_DIR="$CACHE_DIR/pip-tmp"
+install -d -o root -g root -m 0700 "$PIP_TMP_DIR"
+export TMPDIR="$PIP_TMP_DIR"
+export PIP_NO_CACHE_DIR=1
+
+available_kb="$(df -Pk "$CACHE_DIR" | awk 'NR == 2 {print $4}')"
+minimum_kb=$((8 * 1024 * 1024))
+if (( available_kb < minimum_kb )); then
+  echo "At least 8 GB of free disk space is required for installation." >&2
+  df -h "$CACHE_DIR" >&2
+  exit 1
+fi
+
 chown -R root:root "$APP_DIR"
 chmod -R a+rX "$APP_DIR"
 
@@ -124,6 +149,21 @@ echo "Creating the Python environment and installing dependencies..."
 systemctl stop dxt-api dxt-worker 2>/dev/null || true
 python3 -m venv "$APP_DIR/.venv"
 "$APP_DIR/.venv/bin/python" -m pip install --upgrade pip setuptools wheel
+
+if [[ "$TORCH_BACKEND" == "cpu" ]]; then
+  echo "Installing CPU-only PyTorch (CUDA/NVIDIA packages are not required)..."
+  "$APP_DIR/.venv/bin/python" -m pip install \
+    torch==2.8.0 torchaudio==2.8.0 \
+    --index-url https://download.pytorch.org/whl/cpu
+else
+  echo "Using the existing PyTorch installation..."
+  if ! "$APP_DIR/.venv/bin/python" -c 'import torch, torchaudio' >/dev/null 2>&1; then
+    echo "--torch-backend existing requires torch and torchaudio in $APP_DIR/.venv." >&2
+    echo "Install the correct GPU build from pytorch.org, then rerun this installer." >&2
+    exit 1
+  fi
+fi
+
 "$APP_DIR/.venv/bin/python" -m pip install -r "$APP_DIR/requirements.txt"
 "$APP_DIR/.venv/bin/python" "$APP_DIR/patch_adtof_compat.py"
 
