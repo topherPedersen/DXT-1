@@ -24,7 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("rd8-ai-drummer")
 
-app = FastAPI(title="RD-8 AI Drummer", version="3.0.0")
+app = FastAPI(title="DXT-1: MP3 to Midi Drum Track Convertor", version="3.0.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=JOBS_DIR), name="files")
 
