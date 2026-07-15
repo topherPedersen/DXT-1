@@ -13,12 +13,19 @@
       font-weight: 400;
       font-display: swap;
     }
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    @font-face {
+      font-family: "Aileron";
+      src: url("/static/fonts/Aileron-Light.otf") format("opentype");
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+    }
+    :root { color-scheme: dark; font-family:"Aileron", sans-serif; font-weight:300; }
     body { margin: 0; background: #111; color: #eee; }
-    main { width: min(900px, calc(100% - 32px)); margin: 32px auto; }
+    main { width: min(900px, calc(100% - 32px)); margin:32px auto; text-transform:uppercase; }
     .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .panel { background:#1b1b1b; border:1px solid #444; border-radius:12px; padding:20px; margin:16px 0; }
-    h1 { margin:0 0 4px; font-family:"Boecklins Universe", fantasy; font-weight:400; }
+    h1 { margin:0 0 4px; font-family:"Boecklins Universe", fantasy; font-weight:400; text-transform:none; }
     .github-link { color:#eee; display:flex; flex:0 0 auto; padding:8px; border-radius:50%; }
     .github-link:hover, .github-link:focus-visible { background:#2b2b2b; outline:2px solid #aaa; outline-offset:2px; }
     .github-link svg { width:30px; height:30px; fill:currentColor; }
@@ -65,19 +72,19 @@
       <div>
         <label for="grooveBars">Repeating pattern</label>
         <select id="grooveBars">
-          <option value="1">1 bar</option>
-          <option value="2" selected>2 bars</option>
-          <option value="4">4 bars</option>
+          <option value="1">1 BAR</option>
+          <option value="2" selected>2 BARS</option>
+          <option value="4">4 BARS</option>
         </select>
       </div>
       <div>
         <label for="outputBars">Generated length</label>
         <select id="outputBars">
-          <option value="8">8 bars</option>
-          <option value="16">16 bars</option>
-          <option value="32" selected>32 bars</option>
-          <option value="64">64 bars</option>
-          <option value="128">128 bars</option>
+          <option value="8">8 BARS</option>
+          <option value="16">16 BARS</option>
+          <option value="32" selected>32 BARS</option>
+          <option value="64">64 BARS</option>
+          <option value="128">128 BARS</option>
         </select>
       </div>
       <div>
@@ -87,9 +94,9 @@
       <div>
         <label for="phraseEvery">Phrase landmark</label>
         <select id="phraseEvery">
-          <option value="4">Every 4 bars</option>
-          <option value="8" selected>Every 8 bars</option>
-          <option value="16">Every 16 bars</option>
+          <option value="4">EVERY 4 BARS</option>
+          <option value="8" selected>EVERY 8 BARS</option>
+          <option value="16">EVERY 16 BARS</option>
         </select>
         <label><input id="phraseMarkers" type="checkbox" checked> Add light crash marker</label>
       </div>
@@ -99,8 +106,8 @@
       <div>
         <label for="device">Processing device</label>
         <select id="device">
-          <option value="auto" selected>Automatic</option>
-          <option value="mps">Apple Silicon GPU (MPS)</option>
+          <option value="auto" selected>AUTOMATIC</option>
+          <option value="mps">APPLE SILICON GPU (MPS)</option>
           <option value="cuda">NVIDIA GPU (CUDA)</option>
           <option value="cpu">CPU</option>
         </select>
@@ -108,15 +115,15 @@
       <div>
         <label for="model">Demucs model</label>
         <select id="model">
-          <option value="htdemucs" selected>htdemucs</option>
-          <option value="htdemucs_ft">htdemucs_ft (slower)</option>
+          <option value="htdemucs" selected>HTDEMUCS</option>
+          <option value="htdemucs_ft">HTDEMUCS_FT (SLOWER)</option>
         </select>
       </div>
     </div>
 
     <p class="controls">
-      <button id="processButton">Create MIDI</button>
-      <button id="downloadButton" type="button" disabled>Download MIDI</button>
+      <button id="processButton">CREATE MIDI</button>
+      <button id="downloadButton" type="button" disabled>DOWNLOAD MIDI</button>
     </p>
     <progress id="progress" hidden></progress>
     <div id="status"></div>
@@ -126,10 +133,10 @@
   <section id="midiPlayer" class="panel" hidden>
     <h2>MIDI player</h2>
     <div class="controls">
-      <button id="connectButton" class="secondary">Connect MIDI</button>
+      <button id="connectButton" class="secondary">CONNECT MIDI</button>
       <select id="midiOutputs" style="width:auto;min-width:220px"></select>
-      <button id="playButton" disabled>Play</button>
-      <button id="stopButton" class="secondary" disabled>Stop</button>
+      <button id="playButton" disabled>PLAY</button>
+      <button id="stopButton" class="secondary" disabled>STOP</button>
     </div>
     <p class="subtle">The RD-8 normally listens for drum notes on MIDI channel 10. This player sends every loaded note on channel 10.</p>
     <div id="log">No MIDI loaded.</div>
