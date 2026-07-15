@@ -11,8 +11,9 @@ from job_store import JobStore
 from pipeline import PipelineOptions, process_audio
 
 BASE_DIR = Path(__file__).resolve().parent
-JOBS_DIR = BASE_DIR / "data" / "jobs"
-DATABASE_PATH = BASE_DIR / "data" / "jobs.sqlite3"
+DATA_DIR = Path(os.getenv("DXT_DATA_DIR", BASE_DIR / "data")).expanduser().resolve()
+JOBS_DIR = DATA_DIR / "jobs"
+DATABASE_PATH = DATA_DIR / "jobs.sqlite3"
 POLL_SECONDS = float(os.getenv("DXT_WORKER_POLL_SECONDS", "1"))
 RETENTION_HOURS = max(1, int(os.getenv("DXT_JOB_RETENTION_HOURS", "24")))
 STALE_JOB_HOURS = max(1, int(os.getenv("DXT_STALE_JOB_HOURS", "6")))

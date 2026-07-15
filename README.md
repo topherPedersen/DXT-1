@@ -11,6 +11,9 @@
 This version contains the complete backend, persistent conversion queue, and
 browser download flow. No patching of an older codebase is required.
 
+Planning a public deployment? Start with the
+[DXT-1 Production Deployment Guide](DEPLOYMENT.md).
+
 ## Why DXT-1 is noncommercial source-available
 
 DXT-1 depends heavily on ADTOF-PyTorch for automatic drum transcription.
@@ -85,6 +88,7 @@ and object storage.
 
 Production environment variables:
 
+- `DXT_DATA_DIR`: persistent data directory; default `./data`
 - `DXT_JOB_RETENTION_HOURS`: completed/failed file retention; default `24`
 - `DXT_MAX_ACTIVE_JOBS`: queued/processing job limit; default `100`
 - `DXT_WORKER_POLL_SECONDS`: queue polling interval; default `1`

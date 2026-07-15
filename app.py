@@ -17,8 +17,9 @@ from job_store import JobStore, QueueFullError
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
-JOBS_DIR = BASE_DIR / "data" / "jobs"
-DATABASE_PATH = BASE_DIR / "data" / "jobs.sqlite3"
+DATA_DIR = Path(os.getenv("DXT_DATA_DIR", BASE_DIR / "data")).expanduser().resolve()
+JOBS_DIR = DATA_DIR / "jobs"
+DATABASE_PATH = DATA_DIR / "jobs.sqlite3"
 ALLOWED_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg"}
 MAX_UPLOAD_BYTES = 250 * 1024 * 1024
 MAX_ACTIVE_JOBS = max(1, int(os.getenv("DXT_MAX_ACTIVE_JOBS", "100")))
