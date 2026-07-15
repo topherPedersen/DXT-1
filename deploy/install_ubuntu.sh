@@ -153,7 +153,7 @@ python3 -m venv "$APP_DIR/.venv"
 if [[ "$TORCH_BACKEND" == "cpu" ]]; then
   echo "Installing CPU-only PyTorch (CUDA/NVIDIA packages are not required)..."
   "$APP_DIR/.venv/bin/python" -m pip install \
-    torch==2.8.0 torchaudio==2.8.0 \
+    torch==2.9.0+cpu torchaudio==2.9.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 else
   echo "Using the existing PyTorch installation..."
