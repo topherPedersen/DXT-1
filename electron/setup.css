@@ -1,0 +1,9 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; }
+body { margin:0; background:#111; color:#eee; }
+main { padding:36px; }
+h1 { margin:0; font-size:36px; }
+h2 { color:#aaa; font-size:15px; letter-spacing:.12em; margin:8px 0 30px; }
+p { line-height:1.5; }
+progress { width:100%; margin:18px 0; }
+#status { min-height:48px; word-break:break-word; }
+.note { color:#888; font-size:12px; }
