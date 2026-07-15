@@ -167,6 +167,13 @@ fi
 "$APP_DIR/.venv/bin/python" -m pip install -r "$APP_DIR/requirements.txt"
 "$APP_DIR/.venv/bin/python" "$APP_DIR/patch_adtof_compat.py"
 
+if [[ ! -x "$APP_DIR/.venv/bin/demucs" ]]; then
+  echo "Demucs was not installed at $APP_DIR/.venv/bin/demucs." >&2
+  echo "Review the pip output above before retrying the installer." >&2
+  exit 1
+fi
+echo "Verified Demucs: $APP_DIR/.venv/bin/demucs"
+
 cat >"$ENV_FILE" <<EOF
 DXT_DATA_DIR=$DATA_DIR
 DXT_JOB_RETENTION_HOURS=24
@@ -176,6 +183,7 @@ DXT_STALE_JOB_HOURS=6
 HOME=$CACHE_DIR
 XDG_CACHE_HOME=$CACHE_DIR
 TORCH_HOME=$CACHE_DIR/torch
+PATH=$APP_DIR/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 EOF
 chown root:dxt "$ENV_FILE"
 chmod 0640 "$ENV_FILE"
@@ -273,14 +281,19 @@ systemctl restart dxt-api dxt-worker nginx
 echo "Waiting for the API health check..."
 healthy=false
 for _ in {1..30}; do
-  if curl --fail --silent http://127.0.0.1:8000/api/health >/dev/null; then
-    healthy=true
-    break
+  if health_response="$(curl --fail --silent http://127.0.0.1:8000/api/health)"; then
+    if python3 -c \
+      'import json, sys; data = json.loads(sys.argv[1]); raise SystemExit(0 if data.get("ok") and data.get("demucs_available") else 1)' \
+      "$health_response"; then
+      healthy=true
+      break
+    fi
   fi
   sleep 1
 done
 if ! $healthy; then
-  echo "The API did not become healthy. Inspect: journalctl -u dxt-api -n 100" >&2
+  echo "The API did not become healthy or could not find Demucs." >&2
+  echo "Inspect: journalctl -u dxt-api -n 100" >&2
   exit 1
 fi
 
