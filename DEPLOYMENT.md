@@ -108,6 +108,11 @@ persistent root disk instead of Ubuntu's smaller memory-backed `/tmp`, disables
 the duplicate pip download cache, and requires at least 8 GB of free disk space
 before dependency installation.
 
+The installer also adds `/opt/dxt-1/.venv/bin` to the API and worker service
+`PATH` and verifies that `/opt/dxt-1/.venv/bin/demucs` exists and is executable
+before starting either service. This is required because systemd does not
+activate Python virtual environments automatically.
+
 For a future GPU Droplet, first create `/opt/dxt-1/.venv` and install the
 PyTorch/torchaudio build recommended by PyTorch for that Droplet's GPU and
 driver. Then run the installer with:
