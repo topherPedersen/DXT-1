@@ -18,6 +18,7 @@
     "electron-builder": "26.15.3"
   },
   "build": {
+    "forceCodeSigning": true,
     "appId": "blog.topherpedersen.dxt1",
     "productName": "DXT-1",
     "asar": true,
