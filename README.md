@@ -1,4 +1,4 @@
-# RD-8 AI Drummer v3 — complete project
+# DXT-1: MP3 to Midi Drum Track Convertor
 
 This version contains the complete backend and browser player. No patching of
 an older codebase is required.
