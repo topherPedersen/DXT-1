@@ -12,7 +12,8 @@ This version contains the complete backend, persistent conversion queue, and
 browser download flow. No patching of an older codebase is required.
 
 Planning a public deployment? Start with the
-[DXT-1 Production Deployment Guide](DEPLOYMENT.md).
+[DXT-1 Production Deployment Guide](DEPLOYMENT.md), including the automated
+Ubuntu/DigitalOcean installer.
 
 ## Why DXT-1 is noncommercial source-available
 

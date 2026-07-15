@@ -13,6 +13,138 @@ This architecture allows many users to upload and monitor jobs concurrently,
 while one expensive Demucs/ADTOF conversion runs at a time. It is appropriate
 for an initial, moderate-volume deployment. It is not a multi-server design.
 
+For a DigitalOcean Ubuntu Droplet, the automated path is documented in
+[Automated DigitalOcean setup](#automated-digitalocean-setup). The remaining
+sections explain what the installer configures and how to operate it.
+
+## Automated DigitalOcean setup
+
+### A. Create the Droplet and connect with SSH
+
+In the DigitalOcean control panel, create an Ubuntu 24.04 Droplet and add your
+SSH public key during creation. A dedicated-CPU machine with approximately 4
+vCPUs, 16 GB RAM, and at least 50 GB disk is a reasonable starting point.
+
+Copy the Droplet's public IPv4 address. From Terminal on your Mac, connect as
+the initial `root` user:
+
+```bash
+ssh root@YOUR_DROPLET_IP
+```
+
+The first connection asks whether you trust the host key. Verify the displayed
+fingerprint against DigitalOcean if possible, then type `yes`. If your SSH key
+is not the default key, use:
+
+```bash
+ssh -i ~/.ssh/YOUR_PRIVATE_KEY root@YOUR_DROPLET_IP
+```
+
+Never copy or upload your private SSH key to the server or repository.
+
+### B. Clone DXT-1
+
+On the Droplet, install Git and clone the repository into the production path:
+
+```bash
+apt update
+apt install -y git
+git clone https://github.com/topherPedersen/DXT-1 /opt/dxt-1
+cd /opt/dxt-1
+chmod +x deploy/install_ubuntu.sh
+```
+
+If the repository is private, HTTPS cloning requires GitHub authentication.
+Use a read-only deploy key or another narrowly scoped GitHub credential rather
+than placing a personal password in shell history.
+
+### C. Review the licensing notice
+
+Before running the installer, read:
+
+```bash
+less LICENSE.md
+less THIRD_PARTY_NOTICES.md
+```
+
+The installer deliberately refuses to continue until you acknowledge the
+unresolved ADTOF-PyTorch license issue.
+
+### D. Run the installer
+
+For an initial IP-address-only test:
+
+```bash
+./deploy/install_ubuntu.sh --acknowledge-adtof-license-risk
+```
+
+For a real domain whose DNS already points to the Droplet, configure HTTPS in
+the same run:
+
+```bash
+./deploy/install_ubuntu.sh \
+  --domain dxt.example.com \
+  --email you@example.com \
+  --enable-https \
+  --acknowledge-adtof-license-risk
+```
+
+Replace the example domain and email. The script must run as root; the commands
+above already run as root when you connected using the earlier SSH command. If
+you are logged in as a sudo-enabled non-root administrator, prefix the command
+with `sudo`.
+
+The installer is safe to re-run after a Git update. It installs Ubuntu
+packages, creates a fresh virtual environment, configures persistent data and
+model-cache directories, writes systemd services, configures Nginx upload and
+rate limits, starts the API and worker, and performs a health check. With
+`--enable-https`, it also requests a Let's Encrypt certificate through
+Certbot. DNS must be working and ports 80 and 443 must be reachable first.
+
+### E. Configure the DigitalOcean firewall
+
+In DigitalOcean, create a Cloud Firewall allowing:
+
+- inbound TCP 22 (SSH), preferably restricted to your own IP
+- inbound TCP 80 (HTTP) from all addresses
+- inbound TCP 443 (HTTPS) from all addresses
+- outbound traffic required for package installation and model downloads
+
+Do not expose port 8000. Nginx reaches Uvicorn over the Droplet's loopback
+interface.
+
+### F. Verify the installation
+
+On the Droplet:
+
+```bash
+systemctl status dxt-api dxt-worker nginx
+curl http://127.0.0.1:8000/api/health
+journalctl -u dxt-api -n 50 --no-pager
+journalctl -u dxt-worker -n 50 --no-pager
+```
+
+Then open the IP address or HTTPS domain in your browser and perform a short
+conversion. The first conversion may take longer while model weights populate
+`/var/cache/dxt-1`.
+
+### G. Install future updates
+
+SSH into the Droplet and run:
+
+```bash
+cd /opt/dxt-1
+git pull --ff-only
+./deploy/install_ubuntu.sh \
+  --domain dxt.example.com \
+  --email you@example.com \
+  --enable-https \
+  --acknowledge-adtof-license-risk
+```
+
+Use the same options as the original installation. Test updates in staging
+before applying them to the public server.
+
 ## 1. Resolve the licensing gate first
 
 Do not treat deployment as legal clearance. DXT-1 is source-available for
