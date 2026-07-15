@@ -92,7 +92,7 @@ A public macOS release needs all three of the following:
    when the user's Mac is offline.
 
 An Apple Developer Program membership is required. DXT-1 already enables the
-hardened runtime and uses the bundle ID `com.topherpedersen.dxt1`.
+hardened runtime and uses the bundle ID `blog.topherpedersen.dxt1`.
 
 ### 1. Install the Apple development tools
 

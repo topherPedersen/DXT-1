@@ -1,9 +1,9 @@
 {
   "name": "dxt-1-desktop",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "DXT-1 MP3 to MIDI drum-track converter for macOS",
   "main": "electron/main.js",
-  "author": "topherPedersen",
+  "author": "Christopher Pedersen",
   "license": "SEE LICENSE IN LICENSE.md",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
     "electron-builder": "26.15.3"
   },
   "build": {
-    "appId": "com.topherpedersen.dxt1",
+    "appId": "blog.topherpedersen.dxt1",
     "productName": "DXT-1",
     "asar": true,
     "directories": {
