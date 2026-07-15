@@ -96,7 +96,10 @@
       </div>
     </div>
 
-    <p><button id="processButton">Create RD-8 MIDI</button></p>
+    <p class="controls">
+      <button id="processButton">Create MIDI</button>
+      <a id="downloadLink" class="download" hidden>Download MIDI</a>
+    </p>
     <progress id="progress" hidden></progress>
     <div id="status"></div>
   </section>
@@ -109,7 +112,6 @@
       <select id="midiOutputs" style="width:auto;min-width:220px"></select>
       <button id="playButton" disabled>Play</button>
       <button id="stopButton" class="secondary" disabled>Stop</button>
-      <a id="downloadLink" class="download" hidden>Download MIDI</a>
     </div>
     <p class="subtle">The RD-8 normally listens for drum notes on MIDI channel 10. This player sends every loaded note on channel 10.</p>
     <div id="log">No MIDI loaded.</div>

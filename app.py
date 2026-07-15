@@ -123,6 +123,6 @@ async def process(
         "job_id": job_id,
         "mode": mode,
         "midi_url": f"/files/{job_id}/{midi_filename}",
-        "download_name": f"{Path(original_name).stem}_{mode}_rd8.mid",
+        "download_name": f"{Path(original_name).stem}.mid",
         "metadata": result["metadata"],
     }

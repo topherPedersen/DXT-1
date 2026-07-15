@@ -21,6 +21,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install -r requirements.txt
+python patch_adtof_compat.py
 
 echo
 echo "Installation complete."

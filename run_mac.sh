@@ -8,4 +8,5 @@ if [ ! -d .venv ]; then
 fi
 
 source .venv/bin/activate
+python patch_adtof_compat.py
 exec python -m uvicorn app:app --host 127.0.0.1 --port 8000
