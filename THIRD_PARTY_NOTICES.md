@@ -37,6 +37,16 @@ expand those third-party rights.
 | [Mido](https://github.com/mido/mido) | MIDI processing | MIT |
 | [Demucs](https://github.com/facebookresearch/demucs) | Drum-stem separation | MIT |
 | [ADTOF-PyTorch](https://github.com/xavriley/ADTOF-pytorch) | Drum transcription | No license published; see above |
+| [CPython](https://www.python.org/) | Embedded Python runtime | Python Software Foundation License |
+| [imageio-ffmpeg](https://github.com/imageio/imageio-ffmpeg) | Bundled FFmpeg executable provider | BSD-2-Clause; its FFmpeg binary has separate FFmpeg licensing terms |
+
+The `imageio-ffmpeg` macOS wheel currently supplies an FFmpeg build configured
+with GPL components. Distributing that executable requires compliance with the
+applicable FFmpeg/GPL terms, including license notices and corresponding-source
+obligations. DXT-1's noncommercial license does not apply to or restrict FFmpeg
+itself. Before publishing a release, document the exact embedded FFmpeg build,
+include its required license materials, and provide the corresponding source in
+the manner required by that build's license.
 
 ADTOF-PyTorch directly depends on PyTorch (BSD 3-Clause), librosa (ISC),
 pretty-midi (MIT), and NumPy (BSD 3-Clause). Demucs and the web stack install

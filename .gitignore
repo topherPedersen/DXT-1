@@ -7,4 +7,6 @@ data/jobs.sqlite3*
 .DS_Store
 node_modules/
 dist/
+build/runtime-*/
+.cache/desktop-runtime/
 npm-debug.log*

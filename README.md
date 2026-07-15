@@ -120,11 +120,13 @@ Third-party software, model, font, and asset terms:
 
 ### `ffmpeg` missing
 
-Install Homebrew and run:
+Development from source requires FFmpeg. Install Homebrew and run:
 
 ```bash
 brew install ffmpeg
 ```
+
+Release DMGs bundle FFmpeg and do not require users to install it.
 
 ### MPS error on an Intel Mac
 

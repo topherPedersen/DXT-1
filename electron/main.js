@@ -7,7 +7,6 @@ const path = require("node:path");
 const APP_PORT = 8765;
 const APP_URL = `http://127.0.0.1:${APP_PORT}`;
 const GITHUB_URL = "https://github.com/topherPedersen/DXT-1";
-const MINIMUM_PYTHON = [3, 9];
 
 app.setName("DXT-1");
 
@@ -25,16 +24,12 @@ function backendRoot() {
 
 function runtimeRoot() {
   return app.isPackaged
-    ? path.join(app.getPath("userData"), "runtime", ".venv")
+    ? path.join(process.resourcesPath, "runtime")
     : path.join(backendRoot(), ".venv");
 }
 
 function runtimePython() {
-  return process.env.DXT_PYTHON || path.join(runtimeRoot(), "bin", "python");
-}
-
-function runtimeDemucs() {
-  return path.join(path.dirname(runtimePython()), "demucs");
+  return process.env.DXT_PYTHON || path.join(runtimeRoot(), "bin", "python3");
 }
 
 function executableExists(candidate) {
@@ -49,38 +44,12 @@ function executableExists(candidate) {
 function findFfmpeg() {
   const candidates = [
     process.env.DXT_FFMPEG,
+    path.join(runtimeRoot(), "bin", "ffmpeg"),
     "/opt/homebrew/bin/ffmpeg",
     "/usr/local/bin/ffmpeg",
     "/usr/bin/ffmpeg"
   ].filter(Boolean);
   return candidates.find(executableExists) || null;
-}
-
-function parsePythonVersion(executable) {
-  const result = spawnSync(executable, ["--version"], { encoding: "utf8" });
-  if (result.status !== 0) return null;
-  const match = `${result.stdout}${result.stderr}`.match(/Python\s+(\d+)\.(\d+)/);
-  return match ? [Number(match[1]), Number(match[2])] : null;
-}
-
-function versionAtLeast(version, minimum) {
-  return version && (
-    version[0] > minimum[0]
-    || (version[0] === minimum[0] && version[1] >= minimum[1])
-  );
-}
-
-function findSystemPython() {
-  const candidates = [
-    process.env.DXT_SYSTEM_PYTHON,
-    "/opt/homebrew/bin/python3",
-    "/usr/local/bin/python3",
-    "/usr/bin/python3"
-  ].filter(Boolean);
-  return candidates.find(candidate => (
-    executableExists(candidate)
-    && versionAtLeast(parsePythonVersion(candidate), MINIMUM_PYTHON)
-  )) || null;
 }
 
 function setupStatus(message) {
@@ -107,66 +76,23 @@ function createSetupWindow() {
   setupWindow.on("closed", () => { setupWindow = null; });
 }
 
-function runSetupCommand(executable, args, label) {
-  return new Promise((resolve, reject) => {
-    setupStatus(label);
-    const child = spawn(executable, args, {
-      cwd: backendRoot(),
-      env: { ...process.env, PYTHONUNBUFFERED: "1" }
-    });
-    let recentError = "";
-    const handleOutput = chunk => {
-      const text = chunk.toString();
-      recentError = `${recentError}${text}`.slice(-4000);
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length && lines[lines.length - 1]) setupStatus(lines[lines.length - 1]);
-    };
-    child.stdout.on("data", handleOutput);
-    child.stderr.on("data", handleOutput);
-    child.on("error", reject);
-    child.on("exit", code => {
-      if (code === 0) resolve();
-      else reject(new Error(`${label} failed.\n\n${recentError}`));
-    });
-  });
-}
-
 async function ensurePythonRuntime() {
-  if (executableExists(runtimePython()) && executableExists(runtimeDemucs())) return;
-
-  if (!app.isPackaged) {
-    throw new Error(
-      "The Python environment is missing. Run npm run desktop:setup in the DXT-1 folder, then start the app again."
-    );
+  if (!executableExists(runtimePython())) {
+    const action = app.isPackaged
+      ? "Reinstall DXT-1 from a complete release DMG."
+      : "Run npm run desktop:setup in the DXT-1 folder, then start the app again.";
+    throw new Error(`The bundled Python runtime is missing. ${action}`);
   }
 
-  const systemPython = findSystemPython();
-  if (!systemPython) {
+  const check = spawnSync(
+    runtimePython(),
+    ["-c", "import demucs, adtof_pytorch, torch"],
+    { cwd: backendRoot(), encoding: "utf8" }
+  );
+  if (check.status !== 0) {
     throw new Error(
-      "DXT-1 needs Python 3.9 or newer for its first-time setup. Install Python with Homebrew or python.org, then reopen DXT-1."
+      `The bundled audio runtime is incomplete. Reinstall DXT-1.\n\n${check.stderr || check.stdout}`
     );
-  }
-
-  createSetupWindow();
-  await runSetupCommand(systemPython, ["-m", "venv", runtimeRoot()], "Creating the local Python environment…");
-  await runSetupCommand(
-    runtimePython(),
-    ["-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
-    "Preparing the Python installer…"
-  );
-  await runSetupCommand(
-    runtimePython(),
-    ["-m", "pip", "install", "-r", path.join(backendRoot(), "requirements.txt")],
-    "Installing Demucs, PyTorch, and ADTOF… This can take several minutes."
-  );
-  await runSetupCommand(
-    runtimePython(),
-    [path.join(backendRoot(), "patch_adtof_compat.py")],
-    "Applying compatibility checks…"
-  );
-
-  if (!executableExists(runtimeDemucs())) {
-    throw new Error("First-time setup completed without installing the Demucs executable.");
   }
 }
 
@@ -259,7 +185,7 @@ function waitForBackend(timeoutMs = 120000) {
 async function startBackend() {
   const ffmpegPath = findFfmpeg();
   if (!ffmpegPath) {
-    throw new Error("FFmpeg is missing. Install Homebrew and run: brew install ffmpeg");
+    throw new Error("The bundled FFmpeg executable is missing. Reinstall DXT-1 from a complete release DMG.");
   }
   await ensurePythonRuntime();
   setupStatus("Starting DXT-1…");
