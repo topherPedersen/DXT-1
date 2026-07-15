@@ -8,8 +8,13 @@
 > open-source software. Third-party components remain under their own licenses;
 > see [Third-Party Software and Assets](THIRD_PARTY_NOTICES.md).
 
-This version contains the complete backend, persistent conversion queue, and
-browser download flow. No patching of an older codebase is required.
+This version contains the macOS Electron desktop app, complete backend,
+persistent conversion queue, and MIDI download flow. Audio conversion runs on
+the user's Mac instead of requiring a production server.
+
+For the recommended local application, start with the
+[DXT-1 macOS Desktop Guide](DESKTOP.md). The older browser/server deployment
+remains available for people who specifically need it.
 
 Planning a public deployment? Start with the
 [DXT-1 Production Deployment Guide](DEPLOYMENT.md), including the automated
@@ -53,24 +58,20 @@ compute-intensive. More workers can be started when the server has enough CPU,
 GPU, and RAM; SQLite prevents two workers from claiming the same job. Completed
 and failed jobs are deleted after 24 hours by default.
 
-## macOS installation
+## macOS desktop installation
 
 Open Terminal, drag this folder into Terminal after typing `cd `, and press
 Return. Then run:
 
 ```bash
-chmod +x install_mac.sh run_mac.sh
-./install_mac.sh
-./run_mac.sh
+chmod +x install_desktop_mac.sh run_desktop_mac.sh
+./install_desktop_mac.sh
+./run_desktop_mac.sh
 ```
 
-Open:
-
-```text
-http://127.0.0.1:8000
-```
-
-The local launcher starts both the API and one conversion worker.
+The Electron window starts the private API and one conversion worker
+automatically. See [DESKTOP.md](DESKTOP.md) for packaging, first-run setup,
+signing, and distribution details.
 
 ## Production processes
 
@@ -147,6 +148,11 @@ rd8_ai_drummer_v3_full/
 ├── requirements.txt
 ├── install_mac.sh
 ├── run_mac.sh
+├── install_desktop_mac.sh
+├── run_desktop_mac.sh
+├── electron/
+├── package.json
+├── DESKTOP.md
 ├── README.md
 ├── data/
 │   ├── jobs.sqlite3

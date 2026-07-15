@@ -9,6 +9,8 @@ const APP_URL = `http://127.0.0.1:${APP_PORT}`;
 const GITHUB_URL = "https://github.com/topherPedersen/DXT-1";
 const MINIMUM_PYTHON = [3, 9];
 
+app.setName("DXT-1");
+
 let mainWindow = null;
 let setupWindow = null;
 let backendChildren = [];
@@ -28,11 +30,11 @@ function runtimeRoot() {
 }
 
 function runtimePython() {
-  return path.join(runtimeRoot(), "bin", "python");
+  return process.env.DXT_PYTHON || path.join(runtimeRoot(), "bin", "python");
 }
 
 function runtimeDemucs() {
-  return path.join(runtimeRoot(), "bin", "demucs");
+  return path.join(path.dirname(runtimePython()), "demucs");
 }
 
 function executableExists(candidate) {
