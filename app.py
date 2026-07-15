@@ -1,32 +1,38 @@
 from __future__ import annotations
 
 import logging
+import os
+import re
 import shutil
 import uuid
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 
-from pipeline import PipelineOptions, process_audio
+from job_store import JobStore, QueueFullError
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 JOBS_DIR = BASE_DIR / "data" / "jobs"
+DATABASE_PATH = BASE_DIR / "data" / "jobs.sqlite3"
 ALLOWED_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg"}
 MAX_UPLOAD_BYTES = 250 * 1024 * 1024
+MAX_ACTIVE_JOBS = max(1, int(os.getenv("DXT_MAX_ACTIVE_JOBS", "100")))
+JOB_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("rd8-ai-drummer")
+logger = logging.getLogger("dxt-api")
 
-app = FastAPI(title="DXT-1: MP3 to Midi Drum Track Convertor", version="3.0.0")
+app = FastAPI(title="DXT-1: MP3 to Midi Drum Track Convertor", version="4.0.0")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/files", StaticFiles(directory=JOBS_DIR), name="files")
+store = JobStore(DATABASE_PATH)
 
 
 @app.get("/")
@@ -58,7 +64,34 @@ async def save_upload(upload: UploadFile, destination: Path) -> int:
     return written
 
 
-@app.post("/api/process")
+def require_job(job_id: str) -> dict:
+    if not JOB_ID_PATTERN.fullmatch(job_id):
+        raise HTTPException(status_code=404, detail="Job not found.")
+    job = store.get(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    return job
+
+
+def public_job(job: dict) -> dict:
+    response = {
+        "ok": True,
+        "job_id": job["id"],
+        "status": job["status"],
+        "mode": job["mode"],
+        "download_name": job["download_name"],
+    }
+    if job["status"] == "queued":
+        response["queue_position"] = store.queue_position(job["id"])
+    elif job["status"] == "complete":
+        response["download_url"] = f"/api/jobs/{job['id']}/download"
+        response["metadata"] = job["metadata"]
+    elif job["status"] == "failed":
+        response["error"] = job["error"] or "Conversion failed."
+    return response
+
+
+@app.post("/api/process", status_code=status.HTTP_202_ACCEPTED)
 async def process(
     file: Annotated[UploadFile, File(...)],
     mode: Annotated[Literal["full", "groove"], Form()] = "groove",
@@ -77,7 +110,7 @@ async def process(
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported file type {extension or '(none)'}. "
-                   f"Use one of: {', '.join(sorted(ALLOWED_EXTENSIONS))}.",
+            f"Use one of: {', '.join(sorted(ALLOWED_EXTENSIONS))}.",
         )
     if groove_bars not in {1, 2, 4}:
         raise HTTPException(status_code=400, detail="Groove length must be 1, 2, or 4 bars.")
@@ -92,37 +125,61 @@ async def process(
     job_dir = JOBS_DIR / job_id
     job_dir.mkdir(parents=True)
     input_path = job_dir / f"source{extension}"
+    options = {
+        "mode": mode,
+        "groove_bars": groove_bars,
+        "groove_complexity": groove_complexity,
+        "output_bars": output_bars,
+        "phrase_markers": phrase_markers,
+        "phrase_every_bars": phrase_every_bars,
+        "demucs_model": demucs_model,
+        "device": device,
+    }
 
     try:
         await save_upload(file, input_path)
-        result = process_audio(
-            input_path=input_path,
-            job_dir=job_dir,
-            options=PipelineOptions(
-                mode=mode,
-                groove_bars=groove_bars,
-                groove_complexity=groove_complexity,
-                output_bars=output_bars,
-                phrase_markers=phrase_markers,
-                phrase_every_bars=phrase_every_bars,
-                demucs_model=demucs_model,
-                device=device,
-            ),
+        store.enqueue(
+            job_id=job_id,
+            original_name=original_name,
+            download_name=f"{Path(original_name).stem}.mid",
+            mode=mode,
+            options=options,
+            max_active_jobs=MAX_ACTIVE_JOBS,
         )
-    except HTTPException:
+    except QueueFullError as exc:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception:
+        shutil.rmtree(job_dir, ignore_errors=True)
         raise
-    except Exception as exc:
-        logger.exception("Processing failed for job %s", job_id)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
     finally:
         await file.close()
 
-    midi_filename = Path(result["midi_path"]).name
+    logger.info("Queued job %s for %s", job_id, original_name)
     return {
         "ok": True,
         "job_id": job_id,
-        "mode": mode,
-        "midi_url": f"/files/{job_id}/{midi_filename}",
-        "download_name": f"{Path(original_name).stem}.mid",
-        "metadata": result["metadata"],
+        "status": "queued",
+        "status_url": f"/api/jobs/{job_id}",
     }
+
+
+@app.get("/api/jobs/{job_id}")
+def job_status(job_id: str) -> dict:
+    return public_job(require_job(job_id))
+
+
+@app.get("/api/jobs/{job_id}/download")
+def download(job_id: str) -> FileResponse:
+    job = require_job(job_id)
+    if job["status"] != "complete" or not job["midi_filename"]:
+        raise HTTPException(status_code=409, detail="The MIDI file is not ready.")
+    midi_path = JOBS_DIR / job_id / Path(job["midi_filename"]).name
+    if not midi_path.is_file():
+        logger.error("Completed job %s has no MIDI file", job_id)
+        raise HTTPException(status_code=404, detail="The MIDI file is no longer available.")
+    return FileResponse(
+        midi_path,
+        media_type="audio/midi",
+        filename=job["download_name"],
+    )

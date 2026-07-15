@@ -156,6 +156,31 @@
   });
   updateModeUI();
 
+  const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+  async function readJson(response) {
+    try { return await response.json(); }
+    catch { throw new Error(await response.text() || "The server returned an invalid response."); }
+  }
+
+  async function waitForJob(statusUrl) {
+    while (true) {
+      const response = await fetch(statusUrl, { cache: "no-store" });
+      const job = await readJson(response);
+      if (!response.ok) throw new Error(job.detail || "Could not check conversion status.");
+
+      if (job.status === "complete") return job;
+      if (job.status === "failed") throw new Error(job.error || "Conversion failed.");
+      if (job.status === "processing") {
+        status.textContent = "Processing your song… You can keep this tab open while the server works.";
+      } else {
+        const position = job.queue_position ? ` Position in queue: ${job.queue_position}.` : "";
+        status.textContent = `Your song is queued.${position}`;
+      }
+      await wait(2000);
+    }
+  }
+
   async function processAudio() {
     const file = audioFile.files[0];
     if (!file) {
@@ -176,29 +201,19 @@
 
     processButton.disabled = true;
     progress.hidden = false;
-    status.textContent = "Separating drums and transcribing them. Keep this browser tab open…";
+    downloadLink.hidden = true;
+    status.textContent = "Uploading your song…";
 
     try {
       const response = await fetch("/api/process", { method: "POST", body: form });
-      let result;
-      try { result = await response.json(); }
-      catch { throw new Error(await response.text()); }
+      const queuedJob = await readJson(response);
+      if (!response.ok) throw new Error(queuedJob.detail || "Processing failed.");
+      const completedJob = await waitForJob(queuedJob.status_url);
 
-      if (!response.ok) throw new Error(result.detail || "Processing failed.");
-
-      const midiResponse = await fetch(result.midi_url);
-      if (!midiResponse.ok) throw new Error("The generated MIDI could not be downloaded.");
-      const bytes = await midiResponse.arrayBuffer();
-      midi = new Midi(bytes);
-
-      downloadLink.href = result.midi_url;
-      downloadLink.download = result.download_name;
+      downloadLink.href = completedJob.download_url;
+      downloadLink.download = completedJob.download_name;
       downloadLink.hidden = false;
-      playButton.disabled = false;
-      stopButton.disabled = false;
-
-      status.textContent = `Finished: ${result.mode} MIDI created.`;
-      log.textContent = JSON.stringify(result.metadata, null, 2);
+      status.textContent = `Finished: ${completedJob.download_name} is ready to download.`;
     } catch (error) {
       status.textContent = `Error: ${error.message}`;
       console.error(error);

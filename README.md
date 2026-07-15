@@ -1,7 +1,7 @@
 # DXT-1: MP3 to Midi Drum Track Convertor
 
-This version contains the complete backend and browser player. No patching of
-an older codebase is required.
+This version contains the complete backend, persistent conversion queue, and
+browser download flow. No patching of an older codebase is required.
 
 ## Pipeline
 
@@ -11,7 +11,20 @@ an older codebase is required.
 4. Full mode returns that transcription.
 5. Groove Mode identifies a representative 1-, 2-, or 4-bar section,
    simplifies it, repeats it, and optionally adds phrase landmarks.
-6. The browser sends the notes to the RD-8 over Web MIDI channel 10.
+6. The browser polls the queued job and offers the completed MIDI as a download.
+
+## Concurrent conversion jobs
+
+The web API and audio conversion worker run as separate processes. Each upload
+is stored under a random UUID and recorded in `data/jobs.sqlite3`. The API
+returns immediately, so long Demucs/ADTOF processing does not block other users
+from uploading files or checking job status. The worker claims queued jobs
+atomically and processes them in order.
+
+One worker is the safe default because Demucs and ADTOF are memory- and
+compute-intensive. More workers can be started when the server has enough CPU,
+GPU, and RAM; SQLite prevents two workers from claiming the same job. Completed
+and failed jobs are deleted after 24 hours by default.
 
 ## macOS installation
 
@@ -30,19 +43,29 @@ Open:
 http://127.0.0.1:8000
 ```
 
-Use Chrome or Edge for Web MIDI.
+The local launcher starts both the API and one conversion worker.
 
-## RD-8 connection
+## Production processes
 
-Connect the Mac to the RD-8 using USB, or use a USB MIDI interface connected to
-the RD-8 MIDI IN. In the page:
+Run the API and worker under a process supervisor as two separate services:
 
-1. Click **Connect MIDI**.
-2. Select the RD-8 or USB MIDI interface.
-3. Generate or load the MIDI.
-4. Click **Play**.
+```bash
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
+python worker.py
+```
 
-The app sends percussion notes on MIDI channel 10.
+Keep the `data` directory on persistent storage shared by the API and worker.
+Do not run the API and worker on separate hosts unless that directory and its
+SQLite database are on an appropriate shared filesystem. For multi-host or
+high-volume deployment, replace SQLite/local files with a managed task queue
+and object storage.
+
+Production environment variables:
+
+- `DXT_JOB_RETENTION_HOURS`: completed/failed file retention; default `24`
+- `DXT_MAX_ACTIVE_JOBS`: queued/processing job limit; default `100`
+- `DXT_WORKER_POLL_SECONDS`: queue polling interval; default `1`
+- `DXT_STALE_JOB_HOURS`: age before an interrupted job is retried; default `6`
 
 ## Recommended Groove Mode settings
 
@@ -73,15 +96,9 @@ brew install ffmpeg
 Select **CPU** in the web page. MPS is only for Apple Silicon-compatible
 PyTorch installations.
 
-### MIDI output is missing
-
-Use Chrome or Edge, click **Connect MIDI**, and confirm the RD-8 or interface is
-visible to macOS in Audio MIDI Setup.
-
 ### Processing returns an error
 
-The full backend error is returned to the page. Also inspect the Terminal
-window where `run_mac.sh` is running.
+The worker records the error for the browser. Also inspect the worker logs.
 
 ## Project structure
 
@@ -90,11 +107,15 @@ rd8_ai_drummer_v3_full/
 ├── app.py
 ├── pipeline.py
 ├── groove.py
+├── job_store.py
+├── worker.py
+├── patch_adtof_compat.py
 ├── requirements.txt
 ├── install_mac.sh
 ├── run_mac.sh
 ├── README.md
 ├── data/
+│   ├── jobs.sqlite3
 │   └── jobs/
 └── static/
     └── index.html

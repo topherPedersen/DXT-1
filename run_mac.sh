@@ -9,4 +9,9 @@ fi
 
 source .venv/bin/activate
 python patch_adtof_compat.py
-exec python -m uvicorn app:app --host 127.0.0.1 --port 8000
+
+python worker.py &
+worker_pid=$!
+trap 'kill "$worker_pid" 2>/dev/null || true' EXIT INT TERM
+
+python -m uvicorn app:app --host 127.0.0.1 --port 8000
