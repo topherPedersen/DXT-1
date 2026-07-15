@@ -1,7 +1,30 @@
 # DXT-1: MP3 to Midi Drum Track Convertor
 
+> **SOURCE-AVAILABLE SOFTWARE — NONCOMMERCIAL USE ONLY**
+>
+> DXT-1's original code is licensed under the
+> [PolyForm Noncommercial License 1.0.0](LICENSE.md). Commercial use is not
+> permitted under that license. DXT-1 is source-available, not OSI-approved
+> open-source software. Third-party components remain under their own licenses;
+> see [Third-Party Software and Assets](THIRD_PARTY_NOTICES.md).
+
 This version contains the complete backend, persistent conversion queue, and
 browser download flow. No patching of an older codebase is required.
+
+## Why DXT-1 is noncommercial source-available
+
+DXT-1 depends heavily on ADTOF-PyTorch for automatic drum transcription.
+ADTOF-PyTorch is a PyTorch port of the original ADTOF project and bundles
+converted ADTOF model weights. The original ADTOF repository is licensed under
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0. Because Creative
+Commons recommends software-specific licenses for software, DXT-1's original
+code uses the software-focused PolyForm Noncommercial License instead of a
+Creative Commons license.
+
+The current ADTOF-PyTorch repository does not publish its own license. That is
+an unresolved third-party licensing issue, not permission for unrestricted
+use. Read [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before distributing
+or deploying DXT-1.
 
 ## Pipeline
 
@@ -80,6 +103,12 @@ Production environment variables:
 
 Demucs may download model weights the first time it runs. ADTOF-PyTorch bundles
 its model weights according to its project documentation.
+
+## License
+
+Original DXT-1 code and materials: [PolyForm Noncommercial 1.0.0](LICENSE.md).
+Third-party software, model, font, and asset terms:
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Troubleshooting
 
