@@ -1,7 +1,34 @@
 # DXT-1: MP3 to Midi Drum Track Convertor
 
-This version contains the complete backend and browser player. No patching of
-an older codebase is required.
+> **SOURCE-AVAILABLE SOFTWARE — NONCOMMERCIAL USE ONLY**
+>
+> DXT-1's original code is licensed under the
+> [PolyForm Noncommercial License 1.0.0](LICENSE.md). Commercial use is not
+> permitted under that license. DXT-1 is source-available, not OSI-approved
+> open-source software. Third-party components remain under their own licenses;
+> see [Third-Party Software and Assets](THIRD_PARTY_NOTICES.md).
+
+This version contains the complete backend, persistent conversion queue, and
+browser download flow. No patching of an older codebase is required.
+
+Planning a public deployment? Start with the
+[DXT-1 Production Deployment Guide](DEPLOYMENT.md), including the automated
+Ubuntu/DigitalOcean installer.
+
+## Why DXT-1 is noncommercial source-available
+
+DXT-1 depends heavily on ADTOF-PyTorch for automatic drum transcription.
+ADTOF-PyTorch is a PyTorch port of the original ADTOF project and bundles
+converted ADTOF model weights. The original ADTOF repository is licensed under
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0. Because Creative
+Commons recommends software-specific licenses for software, DXT-1's original
+code uses the software-focused PolyForm Noncommercial License instead of a
+Creative Commons license.
+
+The current ADTOF-PyTorch repository does not publish its own license. That is
+an unresolved third-party licensing issue, not permission for unrestricted
+use. Read [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) before distributing
+or deploying DXT-1.
 
 ## Pipeline
 
@@ -11,7 +38,20 @@ an older codebase is required.
 4. Full mode returns that transcription.
 5. Groove Mode identifies a representative 1-, 2-, or 4-bar section,
    simplifies it, repeats it, and optionally adds phrase landmarks.
-6. The browser sends the notes to the RD-8 over Web MIDI channel 10.
+6. The browser polls the queued job and offers the completed MIDI as a download.
+
+## Concurrent conversion jobs
+
+The web API and audio conversion worker run as separate processes. Each upload
+is stored under a random UUID and recorded in `data/jobs.sqlite3`. The API
+returns immediately, so long Demucs/ADTOF processing does not block other users
+from uploading files or checking job status. The worker claims queued jobs
+atomically and processes them in order.
+
+One worker is the safe default because Demucs and ADTOF are memory- and
+compute-intensive. More workers can be started when the server has enough CPU,
+GPU, and RAM; SQLite prevents two workers from claiming the same job. Completed
+and failed jobs are deleted after 24 hours by default.
 
 ## macOS installation
 
@@ -30,19 +70,30 @@ Open:
 http://127.0.0.1:8000
 ```
 
-Use Chrome or Edge for Web MIDI.
+The local launcher starts both the API and one conversion worker.
 
-## RD-8 connection
+## Production processes
 
-Connect the Mac to the RD-8 using USB, or use a USB MIDI interface connected to
-the RD-8 MIDI IN. In the page:
+Run the API and worker under a process supervisor as two separate services:
 
-1. Click **Connect MIDI**.
-2. Select the RD-8 or USB MIDI interface.
-3. Generate or load the MIDI.
-4. Click **Play**.
+```bash
+python -m uvicorn app:app --host 0.0.0.0 --port 8000
+python worker.py
+```
 
-The app sends percussion notes on MIDI channel 10.
+Keep the `data` directory on persistent storage shared by the API and worker.
+Do not run the API and worker on separate hosts unless that directory and its
+SQLite database are on an appropriate shared filesystem. For multi-host or
+high-volume deployment, replace SQLite/local files with a managed task queue
+and object storage.
+
+Production environment variables:
+
+- `DXT_DATA_DIR`: persistent data directory; default `./data`
+- `DXT_JOB_RETENTION_HOURS`: completed/failed file retention; default `24`
+- `DXT_MAX_ACTIVE_JOBS`: queued/processing job limit; default `100`
+- `DXT_WORKER_POLL_SECONDS`: queue polling interval; default `1`
+- `DXT_STALE_JOB_HOURS`: age before an interrupted job is retried; default `6`
 
 ## Recommended Groove Mode settings
 
@@ -57,6 +108,12 @@ The app sends percussion notes on MIDI channel 10.
 
 Demucs may download model weights the first time it runs. ADTOF-PyTorch bundles
 its model weights according to its project documentation.
+
+## License
+
+Original DXT-1 code and materials: [PolyForm Noncommercial 1.0.0](LICENSE.md).
+Third-party software, model, font, and asset terms:
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Troubleshooting
 
@@ -73,15 +130,9 @@ brew install ffmpeg
 Select **CPU** in the web page. MPS is only for Apple Silicon-compatible
 PyTorch installations.
 
-### MIDI output is missing
-
-Use Chrome or Edge, click **Connect MIDI**, and confirm the RD-8 or interface is
-visible to macOS in Audio MIDI Setup.
-
 ### Processing returns an error
 
-The full backend error is returned to the page. Also inspect the Terminal
-window where `run_mac.sh` is running.
+The worker records the error for the browser. Also inspect the worker logs.
 
 ## Project structure
 
@@ -90,11 +141,15 @@ rd8_ai_drummer_v3_full/
 ├── app.py
 ├── pipeline.py
 ├── groove.py
+├── job_store.py
+├── worker.py
+├── patch_adtof_compat.py
 ├── requirements.txt
 ├── install_mac.sh
 ├── run_mac.sh
 ├── README.md
 ├── data/
+│   ├── jobs.sqlite3
 │   └── jobs/
 └── static/
     └── index.html

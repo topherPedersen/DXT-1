@@ -3,4 +3,5 @@ __pycache__/
 *.pyc
 data/jobs/*
 !data/jobs/.gitkeep
+data/jobs.sqlite3*
 .DS_Store
