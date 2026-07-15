@@ -6,12 +6,19 @@
   <title>DXT-1: MP3 to Midi Drum Track Convertor</title>
   <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28/build/Midi.js"></script>
   <style>
+    @font-face {
+      font-family: "Boecklins Universe";
+      src: url("/static/fonts/boecklins-universe.regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+    }
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; background: #111; color: #eee; }
     main { width: min(900px, calc(100% - 32px)); margin: 32px auto; }
     .page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
     .panel { background:#1b1b1b; border:1px solid #444; border-radius:12px; padding:20px; margin:16px 0; }
-    h1 { margin:0 0 4px; }
+    h1 { margin:0 0 4px; font-family:"Boecklins Universe", fantasy; font-weight:400; }
     .github-link { color:#eee; display:flex; flex:0 0 auto; padding:8px; border-radius:50%; }
     .github-link:hover, .github-link:focus-visible { background:#2b2b2b; outline:2px solid #aaa; outline-offset:2px; }
     .github-link svg { width:30px; height:30px; fill:currentColor; }
