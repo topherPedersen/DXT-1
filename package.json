@@ -1,0 +1,63 @@
+{
+  "name": "dxt-1-desktop",
+  "version": "0.5.0",
+  "description": "DXT-1 MP3 to MIDI drum-track converter for macOS",
+  "main": "electron/main.js",
+  "author": "topherPedersen",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "desktop:setup": "./install_mac.sh && npm install",
+    "dist:mac": "electron-builder --mac dmg zip",
+    "pack:mac": "electron-builder --mac dir"
+  },
+  "devDependencies": {
+    "electron": "43.1.1",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.topherpedersen.dxt1",
+    "productName": "DXT-1",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "LICENSE.md",
+      "THIRD_PARTY_NOTICES.md"
+    ],
+    "extraResources": [
+      {
+        "from": ".",
+        "to": "backend",
+        "filter": [
+          "app.py",
+          "groove.py",
+          "job_store.py",
+          "patch_adtof_compat.py",
+          "pipeline.py",
+          "requirements.txt",
+          "worker.py",
+          "static/**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "minimumSystemVersion": "12.0",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "dmg": {
+      "title": "DXT-1 ${version}"
+    }
+  }
+}
