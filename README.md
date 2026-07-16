@@ -1,5 +1,12 @@
 # DXT-1: MP3 to Midi Drum Track Convertor
 
+This page is intended for software developers interested in downloading,
+building, modifying, or reading the source code for DXT-1. If you are not a 
+software developer, and are just interested in using DXT-1 check out the
+landing page for DXT-1 here: https://topherpedersen.github.com//DXT-1
+
+Or simply download the program: https://github.com/topherPedersen/DXT-1/releases/download/v1.0.0/DXT-1-1.0.0-arm64.dmg
+
 > **SOURCE-AVAILABLE SOFTWARE — NONCOMMERCIAL USE ONLY**
 >
 > DXT-1's original code is licensed under the
