@@ -3,7 +3,7 @@
 This page is intended for software developers interested in downloading,
 building, modifying, or reading the source code for DXT-1. If you are not a 
 software developer, and are just interested in using DXT-1 please visit the
-[landing page](https://topherpedersen.github.com/DXT-1) or simply [DOWNLOAD DXT-1 HERE](https://github.com/topherPedersen/DXT-1/releases/download/v1.0.0/DXT-1-1.0.0-arm64.dmg).
+[landing page](https://topherpedersen.github.io/DXT-1) or simply [DOWNLOAD DXT-1 HERE](https://github.com/topherPedersen/DXT-1/releases/download/v1.0.0/DXT-1-1.0.0-arm64.dmg).
 
 > **SOURCE-AVAILABLE SOFTWARE — NONCOMMERCIAL USE ONLY**
 >
